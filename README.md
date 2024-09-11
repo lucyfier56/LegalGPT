@@ -49,3 +49,13 @@
 3. Chat with the Assistant
 Ask legal queries, and the assistant will retrieve relevant context and generate responses.
 
+## Team Members
+
+This project was developed by the following team members:
+
+- **Rudra Panda** - [GitHub Profile](https://github.com/lucyfier56)
+- **Rupin Ajay** - [GitHub Profile](https://github.com/rupinajay)
+- **Sanjay P N** -[GitHub Profile](https://github.com/sanjayperam04)
+- **Sukrith PVS** -[GitHub Profile](https://github.com/sukrithpvs)
+
+We collaborated to build this project, each contributing to different aspects of the application.
