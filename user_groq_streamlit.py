@@ -15,13 +15,13 @@ import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = "GROQ_API_KEY"
 
 # Caching vector store
 @st.cache_resource
 def load_vector_store():
     try:
-        base_index_path = r"C:\Users\rudra\OneDrive - SSN Trust\SNU\Cyber Projects\LegalGPT\faiss_legal_gpt_batch_"
+        base_index_path = r"path\to\your\pdfs"
         num_batches = 3  # Update this if you have more batches
 
         embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
@@ -102,7 +102,7 @@ def auto_save_conversation():
 
 # UI Function to make the application more interactive and visually appealing
 def main():
-    st.set_page_config(page_title="Legal GPT Assistant", page_icon="WhatsApp Image 2024-09-10 at 22.20.50_3c550379.jpg", layout="wide")
+    st.set_page_config(page_title="Legal GPT Assistant", page_icon="pic.jpg", layout="wide")
     st.title("⚖️ Legal GPT Assistant")
 
     with st.sidebar:
