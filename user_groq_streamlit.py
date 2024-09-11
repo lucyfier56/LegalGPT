@@ -21,7 +21,7 @@ os.environ["GROQ_API_KEY"] = "GROQ_API_KEY"
 @st.cache_resource
 def load_vector_store():
     try:
-        base_index_path = r"path\to\your\pdfs"
+        base_index_path = r"path\to\your\faiss\index"
         num_batches = 3  # Update this if you have more batches
 
         embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
