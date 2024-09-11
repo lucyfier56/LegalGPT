@@ -113,5 +113,5 @@ def setup_rag_components(pdf_directory: str, collection_name: str):
         logging.error(f"Failed to set up RAG components: {e}")
 
 if __name__ == "__main__":
-    pdf_directory = r"/Users/rupinajay/Developer/Legal Rag Gig/HC Orders"
+    pdf_directory = r"path\to\your\pdfs"
     setup_rag_components(pdf_directory, 'legal_gpt')
