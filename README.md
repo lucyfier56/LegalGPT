@@ -57,26 +57,32 @@ Whether a solo practitioner or a large law firm, **LegalGPT** scales to meet the
 3. **Reduces Human Error**:  
    By using AI for interpretation and report writing, **LegalGPT** minimizes the risk of human error, ensuring high-quality, accurate legal outputs every time.
 
-## 🛠️ **How to Get Started**
+## 🛠️ How to Get Started  
 
-1. **Clone the Repo**  
-    ```bash
-    git clone https://github.com/yourusername/legal-gpt.git
-    cd legal-gpt
-    ```
+### Clone the Repository  
+```bash  
+git clone https://github.com/yourusername/legal-gpt.git  
+cd legal-gpt
+```
+  
+### Install Dependencies
+Ensure you have Python installed. Use the following command to install all required packages:
+```bash
+pip install -r requirements.txt  
 
-2. **Install Dependencies**  
-    ```bash
-    pip install -r requirements.txt
-    ```
+```
+### Process Documents with RAG
+To prepare your legal documents using Retrieval-Augmented Generation (RAG), run the rag_pinecone.py script:
+```bash
+python rag_pinecone.py
+```
 
-3. **Launch the App**  
-    ```bash
-    streamlit run FinalCode.py
-    ```
+### Interact with the Application
+To query the system and interact with your processed legal documents, use the user.py script:
+```bash
+python user.py  
 
-    Access the app at [**LEGAL-GPT**](https://legal-gpt.streamlit.app/) and start interacting with your legal documents.
-
+```
 ## 📈 **What’s Next?**
 
 1. **Legal Detailed Suit Generator**:  
