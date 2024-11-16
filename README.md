@@ -120,14 +120,14 @@ Unlike traditional tools that handle singular tasks, LegalGPT integrates multipl
    Place your PDF documents in a directory and run the rag_faiss.py script to index them:
 
       ```bash
-     python rag_faiss.py
+     python rag_pinecone.py
   - This will process the PDFs, extract the text, and create a FAISS vector store for document retrieval.
 
 2. Run the Streamlit App
-   Use the Streamlit UI for querying and interacting with the system:
+   Use the user.py file for querying and interacting with the system:
 
    ```bash
-   streamlit run user_groq_streamlit.py
+   streamlit run user.py
    
 3. Chat with the Assistant
 Ask legal queries, and the assistant will retrieve relevant context and generate responses.
