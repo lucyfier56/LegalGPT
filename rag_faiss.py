@@ -1,117 +1,100 @@
 import os
-import logging
+from dotenv import load_dotenv
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_pinecone import PineconeVectorStore
+from langchain_groq import ChatGroq
+from langchain.prompts import ChatPromptTemplate
+from langchain_core.retrievers import BaseRetriever
+from langchain.schema import Document, HumanMessage, AIMessage
 from typing import List
-from langchain.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.schema import Document
-import pytesseract
-from pdf2image import convert_from_path
-import PyPDF2
-from transformers import AutoTokenizer
-import warnings
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 
-# Suppress FutureWarnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+# Load environment variables
+load_dotenv()
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Ensure the tokenizer behavior is explicitly set
-tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-mpnet-base-v2")
-tokenizer.clean_up_tokenization_spaces = True
-
-# Initialize embedding model
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
-
-def extract_text_from_page_with_fallback(pdf_reader, page_num, pdf_path):
-    """Extract text from a single page. If minimal text is found, fallback to OCR."""
-    page = pdf_reader.pages[page_num]
-    text = page.extract_text()
-
-    if not text or len(text.strip()) < 20:  # Threshold to determine if OCR is needed
-        logging.info(f"Using OCR for page {page_num+1} of {os.path.basename(pdf_path)}")
-        images = convert_from_path(pdf_path, first_page=page_num+1, last_page=page_num+1)
-        ocr_text = pytesseract.image_to_string(images[0])
-        text = f"[OCR]\n{ocr_text}"
-    else:
-        logging.info(f"Directly extracted text from page {page_num+1} of {os.path.basename(pdf_path)}")
+class CustomRetriever(BaseRetriever):
+    vectorstore: PineconeVectorStore
     
-    return text
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+        print("\nRetrieving relevant documents...")
+        documents = self.vectorstore.similarity_search(query, k=10)
+        print(f"Retrieved {len(documents)} documents.")
+        return documents
 
-def extract_text_from_hybrid_pdf(pdf_path):
-    """Extract text from both selectable and non-selectable regions of the PDF."""
-    text = ''
-    try:
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page_num in range(len(pdf_reader.pages)):
-                page_text = extract_text_from_page_with_fallback(pdf_reader, page_num, pdf_path)
-                text += f"--- Page {page_num+1} of {os.path.basename(pdf_path)} ---\n{page_text}\n"
-    except Exception as e:
-        logging.error(f"Error reading {pdf_path}: {e}")
-    return text
+    async def _aget_relevant_documents(self, query: str) -> List[Document]:
+        raise NotImplementedError("Async retrieval not implemented")
 
-def load_pdfs(directory: str) -> List[Document]:
-    documents = []
-    for file in os.listdir(directory):
-        if file.lower().endswith('.pdf'):
-            pdf_path = os.path.join(directory, file)
-            try:
-                extracted_text = extract_text_from_hybrid_pdf(pdf_path)
-                documents.append(Document(
-                    page_content=extracted_text,
-                    metadata={"source": file}
-                ))
-                logging.info(f"Loaded text from {file}")
-            except Exception as e:
-                logging.error(f"Error loading {pdf_path}: {e}")
-    return documents
-
-def split_documents(documents: List[Document]) -> List[Document]:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Increased chunk size for more context
-        chunk_overlap=200,  # Increased overlap to maintain context
-        length_function=len,
-        separators=["\n\n", "\n", ".", " ", ""]
+def setup_vectorstore(index_name: str) -> PineconeVectorStore:
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2"
     )
-    split_docs = text_splitter.split_documents(documents)
-    logging.info(f"Created {len(split_docs)} document chunks")
-    return split_docs
+    return PineconeVectorStore.from_existing_index(index_name, embedding_model)
 
-def create_vector_store(documents: List[Document], collection_name: str = 'test') -> FAISS:
-    """Create a FAISS vector store for scalable chunk storage."""
-    # Initialize FAISS vector store
-    vector_store = FAISS.from_documents(
-        documents=documents,
-        embedding=embedding_model
+def setup_llm() -> ChatGroq:
+    return ChatGroq(model="llama-3.1-70b-versatile", temperature=0)
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+def setup_rag_chain(vectorstore: PineconeVectorStore, llm: ChatGroq):
+    retriever = CustomRetriever(vectorstore=vectorstore)
+    
+    template = """You are a knowledgeable legal assistant. Answer the following query based on the provided context:
+    
+    Context: {context}
+    
+    Query: {question}
+    
+    Ensure your response is accurate and based on legal statutes, precedents, or procedures."""
+    
+    prompt = ChatPromptTemplate.from_template(template)
+    
+    rag_chain = (
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough()
+        }
+        | prompt 
+        | llm 
+        | StrOutputParser()
     )
     
-    # Save FAISS index
-    vector_store.save_local(f'./faiss_{collection_name}_index')
+    return rag_chain
+
+def main():
+    print("\nInitializing Legal Assistant...")
     
-    logging.info(f"FAISS index for '{collection_name}' created with {len(documents)} documents.")
-    return vector_store
-
-def setup_rag_components(pdf_directory: str, collection_name: str):
-    logging.info("Starting RAG setup process...")
-
     try:
-        documents = load_pdfs(pdf_directory)
-        split_docs = split_documents(documents)
+        index_name = "legal-rag"
+        vectorstore = setup_vectorstore(index_name)
+        llm = setup_llm()
+        rag_chain = setup_rag_chain(vectorstore, llm)
 
-        # Process in batches to handle a large number of chunks
-        batch_size = 5000
-        for i in range(0, len(split_docs), batch_size):
-            batch_docs = split_docs[i:i+batch_size]
-            vectorstore = create_vector_store(batch_docs, f'{collection_name}_batch_{i//batch_size}')
+        print("\nLegal Assistant Ready. Enter your queries (type 'quit' to exit).\n")
         
-        logging.info("Vector store created and persisted successfully with FAISS")
-
+        chat_history = []
+        while True:
+            query = input("\nEnter your legal query: ").strip()
+            if query.lower() == 'quit':
+                break
+                
+            try:
+                response = rag_chain.invoke(query)
+                
+                print("\nResponse:", response)
+                print("\n" + "="*50)
+                
+                chat_history.append(HumanMessage(content=query))
+                chat_history.append(AIMessage(content=response))
+                
+            except Exception as e:
+                print(f"\nError processing query: {str(e)}")
+                print("Please try again with a different query.")
+                
     except Exception as e:
-        logging.error(f"Failed to set up RAG components: {e}")
+        print(f"\nError initializing the Legal Assistant: {str(e)}")
+        print("Please check your environment variables and dependencies.")
 
 if __name__ == "__main__":
-    pdf_directory = r"path\to\your\pdfs"
-    setup_rag_components(pdf_directory, 'legal_gpt')
+    main()
