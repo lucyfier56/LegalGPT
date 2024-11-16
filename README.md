@@ -97,3 +97,11 @@ python user.py
 ## 📄 **License**
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more details.
+
+## Team Members
+
+- [Rupin Ajay](https://github.com/lucyfier56)
+- [Sukrith P.V.S](https://github.com/sukrithpvs)
+- [Rudra Panda](https://github.com/lucyfier56)
+- [Sanjay P N](https://github.com/sanjayperam04)
+
